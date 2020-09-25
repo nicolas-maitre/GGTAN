@@ -15,6 +15,7 @@ class GGTAN < Gosu::Window
         @bbtan = BBTan.new width/2, height - 20
         @target_line_x = nil
         @target_line_y = nil
+        @fps_display_font = Gosu::Font.new(20)
 
         @launch_speed_multiplier = 1
 
@@ -24,13 +25,14 @@ class GGTAN < Gosu::Window
         @last_launch_stamp = nil
         @launch_progression = 0
         #go
-        3.times{add_ball}
+        10.times{add_ball}
     end
     def add_ball
         @balls.push Ball.new self, balls.length, 0, @bbtan.y
     end
     def update
         dt = self.update_interval / 1000.0
+        @fps = 1/dt
         time = Time.now.to_f
         balls.each{|ball| ball.update dt, time}
         bbtan.update dt
@@ -57,6 +59,10 @@ class GGTAN < Gosu::Window
         if button_down?(Gosu::MsLeft) && @game_state == :ready
             Gosu.draw_line @bbtan.x, @bbtan.y, TARGET_LINE_COLOR_1, mouse_x.clamp(0, width), mouse_y.clamp(0, height), TARGET_LINE_COLOR_2 
         end
+        #fps
+        @fps_display_font.draw_text("#{Gosu.fps} fps", 5, 5, 1, 1, 1, Gosu::Color::WHITE)
+        # @fps = 1/(self.update_interval / 1000.0)
+        @fps_display_font.draw_text("#{@fps.floor} fps", 5, 30, 1, 1, 1, Gosu::Color::WHITE)
     end
     def launch rad_angle
         return unless @game_state == :ready
@@ -133,10 +139,15 @@ class Ball
         @state = :returning
     end
     def draw
+        bottom, right = y + BALL_SIZE, x + BALL_SIZE
         Gosu.draw_rect(x, y, BALL_SIZE, BALL_SIZE, BALL_COLOR)
+        #borders
+        Gosu.draw_line x, y, Gosu::Color::GRAY, right, y , Gosu::Color::GRAY #top
+        Gosu.draw_line x, y, Gosu::Color::GRAY, x, bottom , Gosu::Color::GRAY #left
+        Gosu.draw_line x, bottom, Gosu::Color::GRAY, right , bottom, Gosu::Color::GRAY #bottom
+        Gosu.draw_line right, y, Gosu::Color::GRAY, right , bottom , Gosu::Color::GRAY #right
     end
 end
-
 class BBTan
     BBTAN_SIZE = 20
     BBTAN_COLOR = Gosu::Color::BLUE
