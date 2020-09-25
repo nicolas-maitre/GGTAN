@@ -1,4 +1,5 @@
 require 'gosu'
+BASE_FPS = 1000
 BASE_BALL_SPEED = 800
 BALL_SIZE = 10 
 BALL_COLOR = Gosu::Color::WHITE
@@ -6,10 +7,11 @@ TARGET_LINE_COLOR_1 = Gosu::Color::WHITE
 TARGET_LINE_COLOR_2 = Gosu::Color::BLACK
 BASE_LAUNCH_INTERVAL = 1/6.0
 BALL_RETURN_TIME = 1
+MIN_DEG_ANGLE = 10
 class GGTAN < Gosu::Window
     attr_accessor :balls, :blocks, :bbtan
     def initialize
-        super 400, 600
+        super 400, 600, {update_interval: 1000.0/BASE_FPS}
         @balls = []
         @blocks = []
         @bbtan = BBTan.new width/2, height - 20
@@ -32,7 +34,7 @@ class GGTAN < Gosu::Window
     end
     def update
         dt = self.update_interval / 1000.0
-        @fps = 1/dt
+        @ups = 1/dt
         time = Time.now.to_f
         balls.each{|ball| ball.update dt, time}
         bbtan.update dt
@@ -60,12 +62,12 @@ class GGTAN < Gosu::Window
             Gosu.draw_line @bbtan.x, @bbtan.y, TARGET_LINE_COLOR_1, mouse_x.clamp(0, width), mouse_y.clamp(0, height), TARGET_LINE_COLOR_2 
         end
         #fps
-        @fps_display_font.draw_text("#{Gosu.fps} fps", 5, 5, 1, 1, 1, Gosu::Color::WHITE)
-        # @fps = 1/(self.update_interval / 1000.0)
-        @fps_display_font.draw_text("#{@fps.floor} fps", 5, 30, 1, 1, 1, Gosu::Color::WHITE)
+        @fps_display_font.draw_text("#{@ups.floor} ups", 5, 5, 1, 1, 1, Gosu::Color::WHITE)
+        @fps_display_font.draw_text("#{Gosu.fps} fps", 5, 30, 1, 1, 1, Gosu::Color::WHITE)
     end
     def launch rad_angle
         return unless @game_state == :ready
+        return unless rad_angle.between? get_rad(MIN_DEG_ANGLE), get_rad(180-MIN_DEG_ANGLE)
         puts "launch! #{rad_angle}"
         
         scl = BASE_BALL_SPEED * @launch_speed_multiplier
@@ -117,7 +119,7 @@ class Ball
         end
     end
     def check_collisions
-        @x_spd *= -1 if @x >= @game.width || @x <= 0
+        @x_spd *= -1 if right >= @game.width || @x <= 0
         @y_spd *= -1 if @y <= 0
         set_return if @y >= @game.bbtan.y
     end
@@ -146,6 +148,12 @@ class Ball
         Gosu.draw_line x, y, Gosu::Color::GRAY, x, bottom , Gosu::Color::GRAY #left
         Gosu.draw_line x, bottom, Gosu::Color::GRAY, right , bottom, Gosu::Color::GRAY #bottom
         Gosu.draw_line right, y, Gosu::Color::GRAY, right , bottom , Gosu::Color::GRAY #right
+    end
+    def bottom
+        y + BALL_SIZE
+    end
+    def right
+        x + BALL_SIZE
     end
 end
 class BBTan
