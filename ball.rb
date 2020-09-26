@@ -1,6 +1,11 @@
 class Ball
     BALL_RETURN_TIME = 1
-    BALL_DEBUG_FONT = Gosu::Font.new(20)
+    RECT_DIRECTION_FACE = {
+        top: :bottom,
+        left: :right,
+        bottom: :top,
+        right: :left,
+    }
     # state
     # ready, armed, launched, returning
     attr_accessor :x, :y, :x_spd, :y_spd, :state
@@ -22,31 +27,55 @@ class Ball
         next_bottom = next_y + BALL_SIZE
 
         #blocks
-        @block_x, @block_y = @game.block_virtual_positions(next_x, next_y)
-        if @game.block_touched? @block_x, @block_y
-            puts "block touched #{@block_x}, #{@block_y}"
+        @block_col, @block_line = @game.block_virtual_positions(next_x, next_y)
+        if @game.block_touched? @block_col, @block_line
+            @game.block_touched @block_col, @block_line
+            block_x, block_y = @game.block_real_positions(@block_col, @block_line)
+            puts "block touched #{@block_col}, #{@block_line} | #{block_x}, #{block_y}"
             
+            directions_to_test = []
+
+            directions_to_test << :right if @x_spd > 0
+            directions_to_test << :left if @x_spd < 0
+            directions_to_test << :bottom if @y_spd > 0
+            directions_to_test << :top if @y_spd < 0
+
+            for direction in directions_to_test
+                if rectangle_face_segment_intersection?(RECT_DIRECTION_FACE[direction], block_x,block_y,BLOCK_SIZE,BLOCK_SIZE, @x, @y, @next_x, @next_y)
+                    puts "block bounce on #{RECT_DIRECTION_FACE[direction]}"
+                    handle_block_bounce(direction, block_x, block_y)
+                end
+            end
         end
 
         #walls
-        handle_collision(:right, @game.width) if next_right >= @game.width
-        handle_collision(:left, @game.x) if next_x <= @game.x
-        handle_collision(:top, @game.y) if next_y <= @game.y
+        handle_bounce(:right, @game.width) if next_right >= @game.width
+        handle_bounce(:left, @game.x) if next_x <= @game.x
+        handle_bounce(:top, @game.y) if next_y <= @game.y
         set_return if next_y >= @game.bbtan.y
+
 
         return next_x,next_y
     end
-    def handle_collision direction, coll_pos
+    def handle_block_bounce(direction, block_x, block_y)
+        coll_pos = block_x if direction == :right
+        coll_pos = block_x + BLOCK_SIZE if direction == :left
+        coll_pos = block_y if direction == :bottom
+        coll_pos = block_y + BLOCK_SIZE if direction == :top
+        handle_bounce direction,  coll_pos
+    end
+    def handle_bounce direction, coll_pos
         case direction
-            when :left
-                @x_spd = @x_spd.abs
-            when :right
-                @x_spd = - @x_spd.abs
-            when :top
-                @y_spd = @y_spd.abs
-            when :bottom
-                @y_spd = - @y_spd.abs
+            when :left, :right
+                @x, @x_spd = linear_bouce_pos_spd(@x, coll_pos, @x_spd)
+            when :top, :bottom
+                @y, @y_spd = linear_bouce_pos_spd(@y, coll_pos, @y_spd)
         end
+    end
+    def linear_bouce_pos_spd pos, coll_pos, coll_spd
+        coll_spd = -coll_spd
+        pos = (2*coll_pos - pos - coll_spd)
+        return pos, coll_spd
     end
     
     def arm x_spd, y_spd
@@ -81,8 +110,8 @@ class Ball
         Gosu.draw_line x, bottom, Gosu::Color::GRAY, right , bottom, Gosu::Color::GRAY #bottom
         Gosu.draw_line right, y, Gosu::Color::GRAY, right , bottom , Gosu::Color::GRAY #right
         #debug
-        draw_centered_text(BALL_DEBUG_FONT, "#{@next_x.floor}, #{@next_y.floor}", self.x, self.bottom + 5, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN) if @next_x && @next_y
-        draw_centered_text(BALL_DEBUG_FONT, "#{@block_x}, #{@block_y}", self.x, self.bottom + 30, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN) if @block_x && @block_y
+        draw_centered_text(DEBUG_FONT, "#{@next_x.floor}, #{@next_y.floor}", self.x, self.bottom + 5, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN) if @next_x && @next_y
+        draw_centered_text(DEBUG_FONT, "#{@block_x}, #{@block_y}", self.x, self.bottom + 30, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN) if @block_x && @block_y
     end
     def bottom
         y + BALL_SIZE

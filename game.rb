@@ -3,6 +3,7 @@ require_relative 'utils'
 require_relative 'ball'
 require_relative 'bbtan'
 
+BASE_BALL_COUNT = 1
 BASE_BALL_SPEED = 300
 BALL_SIZE = 10 
 BALL_COLOR = Gosu::Color::WHITE
@@ -18,7 +19,7 @@ BLOCK_SIZE = 50
 BLOCK_SPACING = 5
 BLOCK_FONT = Gosu::Font.new(40)
 
-FPS_FONT = Gosu::Font.new(20)
+DEBUG_FONT = Gosu::Font.new(20)
 
 TOP_MENU_HEIGHT = BLOCK_SIZE
 PLATFORM_HEIGHT = BLOCK_SIZE
@@ -47,7 +48,7 @@ class GGTAN < Gosu::Window
         @last_launch_stamp = nil
         @launch_progression = 0
         #go
-        1.times{add_ball}
+        BASE_BALL_COUNT.times{add_ball}
     end
     def next_level
         @game_state = :transitionning
@@ -112,12 +113,15 @@ class GGTAN < Gosu::Window
             Gosu.draw_line @bbtan.x + (BALL_SIZE / 2), @bbtan.y + (BALL_SIZE / 2), TARGET_LINE_COLOR_1, mouse_x.clamp(0, width) + (BALL_SIZE / 2), mouse_y.clamp(0, height) + (BALL_SIZE / 2), TARGET_LINE_COLOR_2 
         end
         #fps
-        FPS_FONT.draw_text("#{@ups.round} ups", 5, 5, 1, 1, 1, Gosu::Color::WHITE) if @ups
+        DEBUG_FONT.draw_text("#{@ups.round} ups", 5, 5, 1, 1, 1, Gosu::Color::WHITE) if @ups
         fps_text = "#{Gosu.fps} fps"
-        FPS_FONT.draw_text(fps_text, right - 5 - FPS_FONT.text_width(fps_text, 1), 5, 1, 1, 1, Gosu::Color::WHITE)
+        DEBUG_FONT.draw_text(fps_text, right - 5 - DEBUG_FONT.text_width(fps_text, 1), 5, 1, 1, 1, Gosu::Color::WHITE)
         #debug
         coord_x, coord_y = block_virtual_positions self.mouse_x, self.mouse_y
-        FPS_FONT.draw_text("#{coord_x}, #{coord_y}", 5, bottom - 30, 1, 1, 1, Gosu::Color::GREEN)
+        r_coord_x, r_coord_y = block_real_positions coord_x, coord_y
+        DEBUG_FONT.draw_text("#{coord_x}, #{coord_y}", 5, bottom - 30, 1, 1, 1, Gosu::Color::GREEN)
+        r_coord_text = "#{r_coord_x}, #{r_coord_y}"
+        DEBUG_FONT.draw_text(r_coord_text, DEBUG_FONT.text_width(r_coord_text, 1), bottom-30, 1, 1, 1, Gosu::Color::GREEN)
     end
     def draw_grid
         top_offset = self.y - @grid_top_offset + BLOCK_SPACING
@@ -126,8 +130,10 @@ class GGTAN < Gosu::Window
             line.each_with_index do |block_value, ind_col|
                 block_x = left_offset + ind_col * (BLOCK_SIZE + BLOCK_SPACING)
                 block_y = top_offset + ind_line * (BLOCK_SIZE + BLOCK_SPACING)
-                Gosu.draw_rect(block_x, block_y, BLOCK_SIZE, BLOCK_SIZE, Gosu::Color::GRAY)
-                draw_centered_text(BLOCK_FONT, block_value, block_x, block_y, BLOCK_SIZE, BLOCK_SIZE, Gosu::Color::WHITE)
+                if block_value > 0
+                    Gosu.draw_rect(block_x, block_y, BLOCK_SIZE, BLOCK_SIZE, Gosu::Color::GRAY)
+                    draw_centered_text(BLOCK_FONT, block_value, block_x, block_y, BLOCK_SIZE, BLOCK_SIZE, Gosu::Color::WHITE)
+                end
             end
         end
         # Gosu.draw_rect(self.x, TOP_MENU_HEIGHT - @grid_top_offset, self.width, BLOCK_SIZE, Gosu::Color::RED)
@@ -152,6 +158,11 @@ class GGTAN < Gosu::Window
             #all balls ready
             next_level
         end
+    end
+    def block_real_positions col, line
+        x = self.x + BLOCK_SPACING + col * (BLOCK_SIZE + BLOCK_SPACING)
+        y = self.y + BLOCK_SPACING + line * (BLOCK_SIZE + BLOCK_SPACING)
+        return x, y
     end
     def block_virtual_positions x, y
         col = ((x - self.x - BLOCK_SPACING) / (BLOCK_SIZE + BLOCK_SPACING)).floor
