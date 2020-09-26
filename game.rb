@@ -168,7 +168,7 @@ class GGTAN < Gosu::Window
         @block_lines[line_ind][col_ind] -= 1
     end
     def end_game status
-        @status = :end
+        @game_state = :end
         puts "YOU LOST HAHA" if status == :lost
     end
     def needs_cursor?
