@@ -170,7 +170,9 @@ class GGTAN < Gosu::Window
         return col, line
     end
     def block_touched? col_ind, line_ind
+        return false unless (0...@block_lines.length).include? line_ind
         return false unless line = @block_lines[line_ind]
+        return false unless (0...line.length).include? col_ind
         return false unless val = line[col_ind]
         return false unless val > 0
         true
