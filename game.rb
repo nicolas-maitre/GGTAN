@@ -3,6 +3,8 @@ require_relative 'utils'
 require_relative 'ball'
 require_relative 'bbtan'
 
+DEBUG_ENABLE_BLOCK_DESTRUCTION = false
+
 BASE_BALL_COUNT = 1
 BASE_BALL_SPEED = 300
 BALL_SIZE = 10 
@@ -18,6 +20,8 @@ GRID_WIDTH = 6
 BLOCK_SIZE = 50
 BLOCK_SPACING = 5
 BLOCK_FONT = Gosu::Font.new(40)
+
+BLOCKS_TRY_PER_LINE = 4
 
 DEBUG_FONT = Gosu::Font.new(20)
 
@@ -65,7 +69,12 @@ class GGTAN < Gosu::Window
         @balls.push Ball.new self, balls.length, 0, @bbtan.y
     end
     def add_line &done_handler
-        @block_lines.unshift(Array.new(GRID_WIDTH).fill(@level)) #temp generation
+        line_array = Array.new(GRID_WIDTH).fill(0)
+        BLOCKS_TRY_PER_LINE.times do
+            line_array[rand(GRID_WIDTH)] = @level
+        end
+
+        @block_lines.unshift(line_array) #temp generation
         pp @block_lines
         animate(1) do |progression|
             @grid_top_offset = (BLOCK_SIZE + BLOCK_SPACING)*(1-(smooth_progression progression))
@@ -178,6 +187,7 @@ class GGTAN < Gosu::Window
         true
     end
     def block_touched col_ind, line_ind
+        return unless DEBUG_ENABLE_BLOCK_DESTRUCTION
         @block_lines[line_ind][col_ind] -= 1
     end
     def end_game status
