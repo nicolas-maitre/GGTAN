@@ -21,6 +21,7 @@ BLOCK_SIZE = 50
 BLOCK_SPACING = 5
 VISIBLE_BLOCK_SIZE = BLOCK_SIZE - BLOCK_SPACING
 BLOCK_FONT = Gosu::Font.new(40)
+BONUS_FONT = BLOCK_FONT
 
 BLOCKS_TRY_PER_LINE = 4
 
@@ -48,6 +49,7 @@ class GGTAN < Gosu::Window
         @animations = []
         @balls = []
         @block_lines = []
+        @bonus_lines = []
         @bbtan = BBTan.new width/2, height - PLATFORM_HEIGHT
         @target_line_x = nil
         @target_line_y = nil
@@ -70,11 +72,14 @@ class GGTAN < Gosu::Window
         @game_state = :transitionning
         @level+=1
         add_line do
+            update_bonus
             @game_state = :ready
             unless((@block_lines[GRID_HEIGHT - 1] || []).sum == 0)
+                puts "yay, #{@block_lines[GRID_HEIGHT - 1].sum}"
                 #blocks present in last line
                 end_game :lost
             end
+            #TODO: remove bottom lines here
         end
     end
     def add_ball
@@ -85,15 +90,31 @@ class GGTAN < Gosu::Window
         BLOCKS_TRY_PER_LINE.times do
             line_array[rand(GRID_WIDTH)] = @level
         end
-
-        @block_lines.unshift(line_array) #temp generation
+        @block_lines.unshift line_array
+        puts '__block_lines__'
         pp @block_lines
+
+        #assure that a + bonus is spawned
+        bonus_line = Array.new(GRID_WIDTH)
+        loop do
+            if (line_array[col = rand(GRID_WIDTH)]) == 0
+                bonus_line[col] = :+
+                break
+            end
+        end
+        @bonus_lines.unshift bonus_line
+        puts '__bonus_lines__'
+        pp @bonus_lines
+
         animate(1) do |progression|
             @grid_top_offset = BLOCK_SIZE*(1-(smooth_progression progression))
             next if progression < 1
             #animation finished
             done_handler.call if done_handler
         end
+    end
+    def update_bonus
+
     end
     def update
         #time
@@ -146,16 +167,30 @@ class GGTAN < Gosu::Window
         DEBUG_FONT.draw_text(r_coord_text, DEBUG_FONT.text_width(r_coord_text, 1), bottom-30, 1, 1, 1, Gosu::Color::GREEN)
     end
     def draw_grid
-        left_offset = self.x
-        top_offset = self.y - @grid_top_offset
+        for ind_line in 0...GRID_HEIGHT
+            block_line = @block_lines[ind_line]
+            bonus_line = @bonus_lines[ind_line]
+            for ind_col in 0...GRID_WIDTH
+                r_x, r_y = block_real_positions(ind_col, ind_line)
+                r_y -= @grid_top_offset
+                if block_line && block_val = block_line[ind_col]
+                    block_x, block_y= r_x + BLOCK_SPACING / 2, r_y + BLOCK_SPACING / 2
+                    if block_val > 0
+                        Gosu.draw_rect(block_x , block_y , VISIBLE_BLOCK_SIZE, VISIBLE_BLOCK_SIZE, Gosu::Color::GRAY)
+                        draw_centered_text(BLOCK_FONT, block_val, block_x, block_y, VISIBLE_BLOCK_SIZE, VISIBLE_BLOCK_SIZE, Gosu::Color::WHITE)
+                    end
+                end
+                if bonus_line && bonus_val = bonus_line[ind_col]
+                    case bonus_val
+                    when :+
+                        draw_centered_text(BONUS_FONT, '+', r_x, r_y, BLOCK_SIZE, BLOCK_SIZE, Gosu::Color::GREEN)
+                    end
+                end
+            end
+        end
         @block_lines.each_with_index do |line, ind_line|
             line.each_with_index do |block_value, ind_col|
-                block_x = left_offset + ind_col * BLOCK_SIZE + BLOCK_SPACING / 2
-                block_y = top_offset + ind_line * BLOCK_SIZE + BLOCK_SPACING / 2
-                if block_value > 0
-                    Gosu.draw_rect(block_x , block_y , VISIBLE_BLOCK_SIZE, VISIBLE_BLOCK_SIZE, Gosu::Color::GRAY)
-                    draw_centered_text(BLOCK_FONT, block_value, block_x, block_y, VISIBLE_BLOCK_SIZE, VISIBLE_BLOCK_SIZE, Gosu::Color::WHITE)
-                end
+                
             end
         end
         # Gosu.draw_rect(self.x, TOP_MENU_HEIGHT - @grid_top_offset, self.width, BLOCK_SIZE, Gosu::Color::RED)
@@ -203,6 +238,21 @@ class GGTAN < Gosu::Window
         return unless DEBUG_ENABLE_BLOCK_DESTRUCTION
         @block_lines[line_ind][col_ind] -= 1
     end
+    def bonus_touched? col_ind, line_ind
+        !!bonus_at(col_ind, line_ind)
+    end
+    def bonus_at col_ind, line_ind
+        return nil unless (0...@bonus_lines.length).include? line_ind
+        return nil unless line = @bonus_lines[line_ind]
+        return nil unless (0...line.length).include? col_ind
+        return nil unless val = line[col_ind]
+        val
+    end
+    def clear_bonus col_ind, line_ind
+        @bonus_lines[line_ind][col_ind] = nil
+    end
+    # def bonus_touched
+    # end
     def end_game status
         @game_state = :end
         puts "YOU LOST HAHA" if status == :lost

@@ -24,9 +24,11 @@ class Ball
             @debug_old_pos = {x:@x, y: @y}
             @debug_next_pos = {x: next_x, y: next_y}
             check_collisions next_x, next_y
+            check_bonus
         end
     end
     def check_collisions next_x, next_y
+        @x, @y = @x.clamp(@game.x, @game.width), @y.clamp(@game.y, @game.height) #prevent ball runaway, height and width are incorrect
         base_x, base_y = @x, @y
 
         next_right = next_x + BALL_SIZE
@@ -64,6 +66,16 @@ class Ball
 
         @x, @y = next_x,next_y if (@x == base_x && @y == base_y)
         # @x, @y = next_x,next_y
+    end
+    def check_bonus
+        v_pos_x, v_pos_y = @game.block_virtual_positions(@x, @y)
+        return unless @game.bonus_touched?(v_pos_x, v_pos_y)
+        bonus_touched = @game.bonus_at(v_pos_x, v_pos_y)
+        case bonus_touched
+        when :+
+            @game.clear_bonus v_pos_x, v_pos_y
+            @game.add_ball
+        end
     end
     def handle_block_bounce(direction, block_x, block_y, next_x, next_y)
         coll_pos, next_pos = block_x, next_x if direction == :right
