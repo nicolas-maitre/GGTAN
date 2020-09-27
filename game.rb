@@ -4,6 +4,7 @@ DEBUG_ENABLE_BLOCK_DESTRUCTION = true
 
 BASE_FRAMERATE = nil
 
+BASE_LAUNCH_SPEED_MULTIPLIER = 1
 BASE_BALL_COUNT = 1
 BASE_BALL_SPEED = 300
 BALL_SIZE = 10 
@@ -52,7 +53,7 @@ class GGTAN < Gosu::Window
         @target_line_y = nil
         
         @grid_top_offset = 0
-        @launch_speed_multiplier = 1
+        @launch_speed_multiplier = BASE_LAUNCH_SPEED_MULTIPLIER
         
         @level = 0
         #transitionning, ready, firing, returning, end

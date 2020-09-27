@@ -1,4 +1,5 @@
 class Ball
+    DEBUG_BALL_TRAJECTORY = false
     BALL_RETURN_TIME = 1
     RECT_DIRECTION_FACE = {
         top: :bottom,
@@ -34,7 +35,7 @@ class Ball
         #blocks
         block_col, block_line = @game.block_virtual_positions(next_x, next_y)
         @debug_block_v_pos = {x: block_col, y: block_line}
-        if @game.block_touched?(block_col, block_line) && false
+        if @game.block_touched?(block_col, block_line)
             block_x, block_y = @game.block_real_positions(block_col, block_line)
             puts "block that may be touched: #{block_col}, #{block_line} | #{block_x}, #{block_y}"
             
@@ -46,6 +47,7 @@ class Ball
             directions_to_test << :top if @y_spd < 0
 
             for direction in directions_to_test
+                #TODO: improve the test vector
                 if rectangle_face_segment_intersection?(RECT_DIRECTION_FACE[direction], block_x,block_y,BLOCK_SIZE,BLOCK_SIZE, @x + HALF_SIZE, @y + HALF_SIZE, next_x + HALF_SIZE, next_y + HALF_SIZE)
                     puts "block bounce on #{RECT_DIRECTION_FACE[direction]}"
                     @game.block_touched block_col, block_line
@@ -122,6 +124,7 @@ class Ball
         Gosu.draw_line x, bottom, Gosu::Color::GRAY, right , bottom, Gosu::Color::GRAY #bottom
         Gosu.draw_line right, y, Gosu::Color::GRAY, right , bottom , Gosu::Color::GRAY #right
         #debug
+        return unless DEBUG_BALL_TRAJECTORY
         draw_centered_text(DEBUG_FONT, "#{@x.floor}, #{@y.floor}", self.x, self.bottom + 5, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN)
         if @debug_next_pos && @debug_old_pos && @debug_block_v_pos
             Gosu.draw_rect(@debug_next_pos[:x], @debug_next_pos[:y], BALL_SIZE, BALL_SIZE, Gosu::Color::YELLOW)
