@@ -2,6 +2,8 @@ require 'gosu'
 
 DEBUG_ENABLE_BLOCK_DESTRUCTION = true
 
+BASE_FRAMERATE = nil
+
 BASE_BALL_COUNT = 1
 BASE_BALL_SPEED = 300
 BALL_SIZE = 10 
@@ -36,7 +38,11 @@ class GGTAN < Gosu::Window
         window_width = BLOCK_SIZE * GRID_WIDTH
         window_height = TOP_MENU_HEIGHT + BLOCK_SIZE * GRID_HEIGHT + PLATFORM_HEIGHT
         # super window_width, window_height
-        super window_width, window_height, {update_interval: 1000/10} #DEBUG: yes
+        if BASE_FRAMERATE
+            super window_width, window_height, {update_interval: 1000/BASE_FRAMERATE}
+        else
+            super window_width, window_height
+        end
         puts self.x, self.y, self.width, self.height
         @animations = []
         @balls = []

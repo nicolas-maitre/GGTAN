@@ -34,7 +34,7 @@ class Ball
         #blocks
         block_col, block_line = @game.block_virtual_positions(next_x, next_y)
         @debug_block_v_pos = {x: block_col, y: block_line}
-        if @game.block_touched? block_col, block_line
+        if @game.block_touched?(block_col, block_line) && false
             block_x, block_y = @game.block_real_positions(block_col, block_line)
             puts "block that may be touched: #{block_col}, #{block_line} | #{block_x}, #{block_y}"
             
@@ -49,39 +49,45 @@ class Ball
                 if rectangle_face_segment_intersection?(RECT_DIRECTION_FACE[direction], block_x,block_y,BLOCK_SIZE,BLOCK_SIZE, @x + HALF_SIZE, @y + HALF_SIZE, next_x + HALF_SIZE, next_y + HALF_SIZE)
                     puts "block bounce on #{RECT_DIRECTION_FACE[direction]}"
                     @game.block_touched block_col, block_line
-                    handle_block_bounce(direction, block_x, block_y)
+                    handle_block_bounce(direction, block_x, block_y, next_x, next_y)
                 end
             end
         end
 
         #walls
-        handle_bounce(:right, @game.width) if next_right >= @game.width
-        handle_bounce(:left, @game.x) if next_x <= @game.x
-        handle_bounce(:top, @game.y) if next_y <= @game.y
+        handle_bounce(:right, @game.width, next_x) if next_right >= @game.width
+        handle_bounce(:left, @game.x, next_x) if next_x <= @game.x
+        handle_bounce(:top, @game.y, next_y) if next_y <= @game.y
         set_return if next_y >= @game.bbtan.y
 
         @x, @y = next_x,next_y if (@x == base_x && @y == base_y)
         # @x, @y = next_x,next_y
     end
-    def handle_block_bounce(direction, block_x, block_y)
-        coll_pos = block_x if direction == :right
-        coll_pos = block_x + BLOCK_SIZE if direction == :left
-        coll_pos = block_y if direction == :bottom
-        coll_pos = block_y + BLOCK_SIZE if direction == :top
-        handle_bounce direction,  coll_pos
+    def handle_block_bounce(direction, block_x, block_y, next_x, next_y)
+        coll_pos, next_pos = block_x, next_x if direction == :right
+        coll_pos, next_pos = (block_x + BLOCK_SIZE),next_x if direction == :left
+        coll_pos, next_pos = block_y, next_y if direction == :bottom
+        coll_pos, next_pos = (block_y + BLOCK_SIZE), next_y if direction == :top
+        handle_bounce direction, coll_pos, next_pos
     end
-    def handle_bounce direction, coll_pos
+    def handle_bounce direction, coll_pos, next_pos
         case direction
-            when :left, :right
-                @x, @x_spd = linear_bouce_pos_spd(@x, coll_pos, @x_spd)
-            when :top, :bottom
-                @y, @y_spd = linear_bouce_pos_spd(@y, coll_pos, @y_spd)
+        when :left, :right
+            puts "handle horizontal bounce dir:#{direction}, coll_pos:#{coll_pos.floor 1}, x:#{@x.floor 1}, next_x:#{next_pos.floor 1}"
+            @x = linear_bouce_pos(@x, coll_pos, next_pos)
+            @x_spd *= -1
+            puts "resulting x:#{@x.floor 1}"
+        when :top, :bottom
+            @y = linear_bouce_pos(@y, coll_pos, next_pos)
+            @y_spd *= -1
         end
     end
-    def linear_bouce_pos_spd pos, coll_pos, coll_spd
-        coll_spd = -coll_spd
-        pos = (2*coll_pos - pos - coll_spd)
-        return pos, coll_spd
+    def linear_bouce_pos pos, coll_pos, next_pos
+        first_move = coll_pos - pos
+        res = -first_move + next_pos
+        return res
+        # first_move = (pos + coll_spd + coll_pos)
+        # return (pos + coll_spd + coll_pos), -coll_spd
     end
     
     def arm x_spd, y_spd
