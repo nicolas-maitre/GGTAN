@@ -1,9 +1,6 @@
 require 'gosu'
-require_relative 'utils'
-require_relative 'ball'
-require_relative 'bbtan'
 
-DEBUG_ENABLE_BLOCK_DESTRUCTION = false
+DEBUG_ENABLE_BLOCK_DESTRUCTION = true
 
 BASE_BALL_COUNT = 1
 BASE_BALL_SPEED = 300
@@ -19,6 +16,7 @@ GRID_HEIGHT = 10
 GRID_WIDTH = 6
 BLOCK_SIZE = 50
 BLOCK_SPACING = 5
+VISIBLE_BLOCK_SIZE = BLOCK_SIZE - BLOCK_SPACING
 BLOCK_FONT = Gosu::Font.new(40)
 
 BLOCKS_TRY_PER_LINE = 4
@@ -27,12 +25,18 @@ DEBUG_FONT = Gosu::Font.new(20)
 
 TOP_MENU_HEIGHT = BLOCK_SIZE
 PLATFORM_HEIGHT = BLOCK_SIZE
+
+require_relative 'utils'
+require_relative 'ball'
+require_relative 'bbtan'
+
 class GGTAN < Gosu::Window
     attr_accessor :balls, :blocks, :bbtan
     def initialize
-        window_width = (BLOCK_SIZE + BLOCK_SPACING) * GRID_WIDTH + BLOCK_SPACING
-        window_height = TOP_MENU_HEIGHT + (BLOCK_SIZE + BLOCK_SPACING) * GRID_HEIGHT + PLATFORM_HEIGHT
-        super window_width, window_height
+        window_width = BLOCK_SIZE * GRID_WIDTH
+        window_height = TOP_MENU_HEIGHT + BLOCK_SIZE * GRID_HEIGHT + PLATFORM_HEIGHT
+        # super window_width, window_height
+        super window_width, window_height, {update_interval: 1000/10} #DEBUG: yes
         puts self.x, self.y, self.width, self.height
         @animations = []
         @balls = []
@@ -47,6 +51,7 @@ class GGTAN < Gosu::Window
         @level = 0
         #transitionning, ready, firing, returning, end
         @game_state = :returning
+        @is_paused = false
         #launch
         
         @last_launch_stamp = nil
@@ -77,7 +82,7 @@ class GGTAN < Gosu::Window
         @block_lines.unshift(line_array) #temp generation
         pp @block_lines
         animate(1) do |progression|
-            @grid_top_offset = (BLOCK_SIZE + BLOCK_SPACING)*(1-(smooth_progression progression))
+            @grid_top_offset = BLOCK_SIZE*(1-(smooth_progression progression))
             next if progression < 1
             #animation finished
             done_handler.call if done_handler
@@ -90,6 +95,7 @@ class GGTAN < Gosu::Window
         @last_update_stamp = time
         @ups = 1.0/dt if dt > 0
         #updates
+        return if @is_paused
         update_animations time
         balls.each{|ball| ball.update dt, time}
         bbtan.update dt
@@ -133,15 +139,15 @@ class GGTAN < Gosu::Window
         DEBUG_FONT.draw_text(r_coord_text, DEBUG_FONT.text_width(r_coord_text, 1), bottom-30, 1, 1, 1, Gosu::Color::GREEN)
     end
     def draw_grid
-        top_offset = self.y - @grid_top_offset + BLOCK_SPACING
-        left_offset = self.x + BLOCK_SPACING
+        left_offset = self.x
+        top_offset = self.y - @grid_top_offset
         @block_lines.each_with_index do |line, ind_line|
             line.each_with_index do |block_value, ind_col|
-                block_x = left_offset + ind_col * (BLOCK_SIZE + BLOCK_SPACING)
-                block_y = top_offset + ind_line * (BLOCK_SIZE + BLOCK_SPACING)
+                block_x = left_offset + ind_col * BLOCK_SIZE + BLOCK_SPACING / 2
+                block_y = top_offset + ind_line * BLOCK_SIZE + BLOCK_SPACING / 2
                 if block_value > 0
-                    Gosu.draw_rect(block_x, block_y, BLOCK_SIZE, BLOCK_SIZE, Gosu::Color::GRAY)
-                    draw_centered_text(BLOCK_FONT, block_value, block_x, block_y, BLOCK_SIZE, BLOCK_SIZE, Gosu::Color::WHITE)
+                    Gosu.draw_rect(block_x , block_y , VISIBLE_BLOCK_SIZE, VISIBLE_BLOCK_SIZE, Gosu::Color::GRAY)
+                    draw_centered_text(BLOCK_FONT, block_value, block_x, block_y, VISIBLE_BLOCK_SIZE, VISIBLE_BLOCK_SIZE, Gosu::Color::WHITE)
                 end
             end
         end
@@ -169,13 +175,13 @@ class GGTAN < Gosu::Window
         end
     end
     def block_real_positions col, line
-        x = self.x + BLOCK_SPACING + col * (BLOCK_SIZE + BLOCK_SPACING)
-        y = self.y + BLOCK_SPACING + line * (BLOCK_SIZE + BLOCK_SPACING)
+        x = self.x + col * BLOCK_SIZE
+        y = self.y + line * BLOCK_SIZE
         return x, y
     end
     def block_virtual_positions x, y
-        col = ((x - self.x - BLOCK_SPACING) / (BLOCK_SIZE + BLOCK_SPACING)).floor
-        line = ((y - self.y - BLOCK_SPACING) / (BLOCK_SIZE + BLOCK_SPACING)).floor
+        col = ((x - self.x) / BLOCK_SIZE).floor
+        line = ((y - self.y) / BLOCK_SIZE).floor
         return col, line
     end
     def block_touched? col_ind, line_ind
@@ -199,6 +205,13 @@ class GGTAN < Gosu::Window
     end
     def mouse_move
         puts "wow"
+    end
+    def button_down id
+        super id
+        if id == Gosu::KB_P
+            puts "hohoho"
+            @is_paused ^= true
+        end
     end
     def button_up id
         if id == Gosu::MsLeft

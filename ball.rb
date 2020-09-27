@@ -6,6 +6,7 @@ class Ball
         bottom: :top,
         right: :left,
     }
+    HALF_SIZE = BALL_SIZE / 2
     # state
     # ready, armed, launched, returning
     attr_accessor :x, :y, :x_spd, :y_spd, :state
@@ -17,21 +18,25 @@ class Ball
     def update dt, time
         case state
         when :launched
-            @next_x = @x + @x_spd * dt
-            @next_y = @y + @y_spd * dt
-            @x, @y = check_collisions @next_x, @next_y
+            next_x = @x + @x_spd * dt
+            next_y = @y + @y_spd * dt
+            @debug_old_pos = {x:@x, y: @y}
+            @debug_next_pos = {x: next_x, y: next_y}
+            check_collisions next_x, next_y
         end
     end
     def check_collisions next_x, next_y
+        base_x, base_y = @x, @y
+
         next_right = next_x + BALL_SIZE
         next_bottom = next_y + BALL_SIZE
 
         #blocks
-        @block_col, @block_line = @game.block_virtual_positions(next_x, next_y)
-        if @game.block_touched? @block_col, @block_line
-            @game.block_touched @block_col, @block_line
-            block_x, block_y = @game.block_real_positions(@block_col, @block_line)
-            puts "block touched #{@block_col}, #{@block_line} | #{block_x}, #{block_y}"
+        block_col, block_line = @game.block_virtual_positions(next_x, next_y)
+        @debug_block_v_pos = {x: block_col, y: block_line}
+        if @game.block_touched? block_col, block_line
+            block_x, block_y = @game.block_real_positions(block_col, block_line)
+            puts "block that may be touched: #{block_col}, #{block_line} | #{block_x}, #{block_y}"
             
             directions_to_test = []
 
@@ -41,8 +46,9 @@ class Ball
             directions_to_test << :top if @y_spd < 0
 
             for direction in directions_to_test
-                if rectangle_face_segment_intersection?(RECT_DIRECTION_FACE[direction], block_x,block_y,BLOCK_SIZE,BLOCK_SIZE, @x, @y, @next_x, @next_y)
+                if rectangle_face_segment_intersection?(RECT_DIRECTION_FACE[direction], block_x,block_y,BLOCK_SIZE,BLOCK_SIZE, @x + HALF_SIZE, @y + HALF_SIZE, next_x + HALF_SIZE, next_y + HALF_SIZE)
                     puts "block bounce on #{RECT_DIRECTION_FACE[direction]}"
+                    @game.block_touched block_col, block_line
                     handle_block_bounce(direction, block_x, block_y)
                 end
             end
@@ -54,8 +60,8 @@ class Ball
         handle_bounce(:top, @game.y) if next_y <= @game.y
         set_return if next_y >= @game.bbtan.y
 
-
-        return next_x,next_y
+        @x, @y = next_x,next_y if (@x == base_x && @y == base_y)
+        # @x, @y = next_x,next_y
     end
     def handle_block_bounce(direction, block_x, block_y)
         coll_pos = block_x if direction == :right
@@ -110,8 +116,15 @@ class Ball
         Gosu.draw_line x, bottom, Gosu::Color::GRAY, right , bottom, Gosu::Color::GRAY #bottom
         Gosu.draw_line right, y, Gosu::Color::GRAY, right , bottom , Gosu::Color::GRAY #right
         #debug
-        draw_centered_text(DEBUG_FONT, "#{@next_x.floor}, #{@next_y.floor}", self.x, self.bottom + 5, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN) if @next_x && @next_y
-        draw_centered_text(DEBUG_FONT, "#{@block_x}, #{@block_y}", self.x, self.bottom + 30, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN) if @block_x && @block_y
+        draw_centered_text(DEBUG_FONT, "#{@x.floor}, #{@y.floor}", self.x, self.bottom + 5, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN)
+        if @debug_next_pos && @debug_old_pos && @debug_block_v_pos
+            Gosu.draw_rect(@debug_next_pos[:x], @debug_next_pos[:y], BALL_SIZE, BALL_SIZE, Gosu::Color::YELLOW)
+            Gosu.draw_rect(@debug_old_pos[:x], @debug_old_pos[:y], BALL_SIZE, BALL_SIZE, Gosu::Color::GRAY)
+            Gosu.draw_line(@debug_old_pos[:x] + HALF_SIZE, @debug_old_pos[:y] + HALF_SIZE, Gosu::Color::YELLOW, @debug_next_pos[:x] + HALF_SIZE , @debug_next_pos[:y] + HALF_SIZE , Gosu::Color::YELLOW)
+            rct_real_pos_x, rct_real_pos_y = @game.block_real_positions(@debug_block_v_pos[:x], @debug_block_v_pos[:y])
+            Gosu.draw_rect(rct_real_pos_x, rct_real_pos_y, BLOCK_SIZE, BLOCK_SIZE, Gosu::Color::rgba(128,128,128,128))
+            draw_centered_text(DEBUG_FONT, "#{@debug_next_pos[:x].floor}, #{@debug_next_pos[:y].floor} | #{@debug_block_v_pos[:x]}, #{@debug_block_v_pos[:y]}", self.x, self.bottom + 30, BALL_SIZE, BALL_SIZE, Gosu::Color::GREEN)
+        end
     end
     def bottom
         y + BALL_SIZE
