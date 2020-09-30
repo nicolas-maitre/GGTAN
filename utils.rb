@@ -43,5 +43,5 @@ def smooth_progression progression, timing_function= :ease
 end
 def draw_centered_text(font, string, x, y, width, height, color)
     text_width = font.text_width(string, 1)
-    font.draw_text(string, x + (width - text_width) / 2, y + ((height - font.height) / 2), 1, 1, 1, color)
+    font.draw_text(string, x + (width - text_width) / 2, y + ((height - font.height) / 2), 0, 1, 1, color)
 end

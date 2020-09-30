@@ -22,6 +22,8 @@ BLOCK_SPACING = 5
 VISIBLE_BLOCK_SIZE = BLOCK_SIZE - BLOCK_SPACING
 BLOCK_FONT = Gosu::Font.new(40)
 BONUS_FONT = BLOCK_FONT
+MAIN_END_TEXT_FONT = Gosu::Font.new(50)
+SUB_END_TEXT_FONT = Gosu::Font.new(25)
 
 BLOCKS_TRY_PER_LINE = 4
 
@@ -46,6 +48,10 @@ class GGTAN < Gosu::Window
             super window_width, window_height
         end
         puts self.x, self.y, self.width, self.height
+        @is_paused = false
+        reset
+    end
+    def reset
         @animations = []
         @balls = []
         @block_lines = []
@@ -60,7 +66,6 @@ class GGTAN < Gosu::Window
         @level = 0
         #transitionning, ready, firing, returning, end
         @game_state = :returning
-        @is_paused = false
         #launch
         
         @last_launch_stamp = nil
@@ -154,6 +159,12 @@ class GGTAN < Gosu::Window
         @bbtan.draw
         if button_down?(Gosu::MsLeft) && @game_state == :ready
             Gosu.draw_line @bbtan.x + (BALL_SIZE / 2), @bbtan.y + (BALL_SIZE / 2), TARGET_LINE_COLOR_1, mouse_x.clamp(0, width) + (BALL_SIZE / 2), mouse_y.clamp(0, height) + (BALL_SIZE / 2), TARGET_LINE_COLOR_2 
+        end
+        #game over
+        if @game_state == :end
+            Gosu.draw_rect self.x, self.y, self.game_width, self.game_height, Gosu::Color::rgba(128,0,0,128)
+            draw_centered_text(MAIN_END_TEXT_FONT, "GAME OVER", self.x, self.y, self.game_width, self.game_height, Gosu::Color::WHITE)
+            draw_centered_text(SUB_END_TEXT_FONT, "push any button to restart", self.x, self.y + 40, self.game_width, self.game_height, Gosu::Color::WHITE)
         end
         #fps
         DEBUG_FONT.draw_text("#{@ups.round} ups", 5, 5, 1, 1, 1, Gosu::Color::WHITE) if @ups
@@ -265,10 +276,8 @@ class GGTAN < Gosu::Window
     end
     def button_down id
         super id
-        if id == Gosu::KB_P
-            puts "hohoho"
-            @is_paused ^= true
-        end
+        @is_paused ^= true if id == Gosu::KB_P #toggle pause
+        reset if @game_state == :end
     end
     def button_up id
         if id == Gosu::MsLeft
@@ -286,6 +295,12 @@ class GGTAN < Gosu::Window
     end
     def right
         width
+    end
+    def game_height
+        self.height - TOP_MENU_HEIGHT - PLATFORM_HEIGHT
+    end
+    def game_width
+        self.width
     end
     def animate duration, time = Time.now.to_f, &handler
         raise "no animation handler specified" unless handler
